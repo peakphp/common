@@ -1,6 +1,8 @@
 <?php
 
-namespace Peak\Common;
+declare(strict_types=1);
+
+namespace Peak\Common\Collection;
 
 use Peak\Common\Traits\ArrayMergeRecursiveDistinct;
 
@@ -9,13 +11,14 @@ use ArrayAccess;
 use ArrayIterator;
 use JsonSerializable;
 use IteratorAggregate;
+use Serializable;
 use \Exception;
 use \Closure;
 
 /**
  * Collection object
  */
-class Collection implements ArrayAccess, Countable, IteratorAggregate, JsonSerializable
+class Collection implements ArrayAccess, Countable, IteratorAggregate, JsonSerializable, Serializable
 {
     use ArrayMergeRecursiveDistinct;
 
@@ -46,7 +49,7 @@ class Collection implements ArrayAccess, Countable, IteratorAggregate, JsonSeria
     /**
      * Set read only on
      */
-    public function readOnly()
+    public function readOnly(): void
     {
         $this->read_only = true;
     }
@@ -56,7 +59,7 @@ class Collection implements ArrayAccess, Countable, IteratorAggregate, JsonSeria
      *
      * @return boolean
      */
-    public function isReadOnly()
+    public function isReadOnly(): bool
     {
         return $this->read_only;
     }
@@ -67,7 +70,7 @@ class Collection implements ArrayAccess, Countable, IteratorAggregate, JsonSeria
      * @param  array $items
      * @return Collection
      */
-    public static function make($items = null)
+    public static function make($items = null): Collection
     {
         return new static($items);
     }
@@ -81,6 +84,7 @@ class Collection implements ArrayAccess, Countable, IteratorAggregate, JsonSeria
      * @param  string $func array_ func
      * @param  mixed  $argv
      * @return mixed
+     * @throws Exception
      */
     public function __call($func, $argv)
     {
@@ -110,7 +114,7 @@ class Collection implements ArrayAccess, Countable, IteratorAggregate, JsonSeria
      * @param string $key
      * @param mixed  $value
      */
-    public function __set($key, $value)
+    public function __set($key, $value): void
     {
         if (!$this->isReadOnly()) {
             $this->items[$key] = $value;
@@ -123,7 +127,7 @@ class Collection implements ArrayAccess, Countable, IteratorAggregate, JsonSeria
      * @param   string $key
      * @return  bool
      */
-    public function __isset($key)
+    public function __isset($key): bool
     {
         return isset($this->items[$key]);
     }
@@ -133,7 +137,7 @@ class Collection implements ArrayAccess, Countable, IteratorAggregate, JsonSeria
      *
      * @param string $key
      */
-    public function __unset($key)
+    public function __unset($key): void
     {
         if (!$this->isReadOnly()) {
             unset($this->items[$key]);
@@ -200,7 +204,7 @@ class Collection implements ArrayAccess, Countable, IteratorAggregate, JsonSeria
      * @param mixed $item
      * @return $this
      */
-    public function push($item)
+    public function push($item): Collection
     {
         $this->items[] = $item;
         return $this;
@@ -211,7 +215,7 @@ class Collection implements ArrayAccess, Countable, IteratorAggregate, JsonSeria
      *
      * @return integer
      */
-    public function count()
+    public function count(): int
     {
         return count($this->items);
     }
@@ -221,7 +225,7 @@ class Collection implements ArrayAccess, Countable, IteratorAggregate, JsonSeria
      *
      * @return ArrayIterator
      */
-    public function getIterator()
+    public function getIterator(): ArrayIterator
     {
         return new ArrayIterator($this->items);
     }
@@ -231,7 +235,7 @@ class Collection implements ArrayAccess, Countable, IteratorAggregate, JsonSeria
      *
      * @return bool
      */
-    public function isEmpty()
+    public function isEmpty(): bool
     {
         return empty($this->items);
     }
@@ -239,23 +243,27 @@ class Collection implements ArrayAccess, Countable, IteratorAggregate, JsonSeria
     /**
      * Empty the collection
      */
-    public function strip()
+    public function strip(): void
     {
         $this->items = [];
     }
 
     /**
      * To array
+     *
+     * @return array
      */
-    public function toArray()
+    public function toArray(): array
     {
         return $this->items;
     }
 
     /**
      * To simple object
+     *
+     * @return \stdClass
      */
-    public function toObject()
+    public function toObject(): \stdClass
     {
         return (object)$this->items;
     }
@@ -267,19 +275,37 @@ class Collection implements ArrayAccess, Countable, IteratorAggregate, JsonSeria
      * @param  integer $depth   Set the maximum depth. Must be greater than zero.
      * @return string
      */
-    public function jsonSerialize($options = 0, $depth = 512)
+    public function jsonSerialize(int $options = 0, int $depth = 512): string
     {
         return json_encode($this->items, $options, $depth);
+    }
+
+    /**
+     * @return string
+     */
+    public function serialize()
+    {
+        return serialize($this->items);
+    }
+
+    /**
+     * @param string $data
+     */
+    public function unserialize($data)
+    {
+        $this->items = unserialize($data);
     }
 
     /**
      * Array map
      *
      * @param  Closure $closure
+     * @return $this
      */
-    public function map(Closure $closure)
+    public function map(Closure $closure): Collection
     {
         $this->items = array_map($closure, $this->items);
+        return $this;
     }
 
     /**
@@ -290,7 +316,7 @@ class Collection implements ArrayAccess, Countable, IteratorAggregate, JsonSeria
      * @param  array|null $b If specified, $b will be merge into $a and replace current collection
      * @return array
      */
-    public function mergeRecursiveDistinct($a, $b = null, $get_result = false)
+    public function mergeRecursiveDistinct($a, $b = null, $get_result = false): ?array
     {
         if (!isset($b)) {
             $temp = $a;
